@@ -76,6 +76,12 @@ final class AdsManager: NSObject, ObservableObject {
         privacyOptionsRequired = ConsentInformation.shared.privacyOptionsRequirementStatus == .required
         #endif
         if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
+            // The system silently skips the prompt unless the app is active, so wait for that first.
+            if UIApplication.shared.applicationState != .active {
+                for await _ in NotificationCenter.default.notifications(named: UIApplication.didBecomeActiveNotification) {
+                    break
+                }
+            }
             _ = await ATTrackingManager.requestTrackingAuthorization()
         }
         startSDKIfAllowed()

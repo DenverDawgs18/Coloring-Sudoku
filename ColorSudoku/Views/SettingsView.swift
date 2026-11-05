@@ -75,6 +75,7 @@ struct SettingsView: View {
                 }
 
                 Section("About") {
+                    NavigationLink("Privacy Policy") { PrivacyPolicyView() }
                     LabeledContent("Version", value: Bundle.main.appVersion)
                 }
             }

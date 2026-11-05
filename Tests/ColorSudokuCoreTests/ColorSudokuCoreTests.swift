@@ -66,6 +66,21 @@ final class GeneratorTests: XCTestCase {
         }
     }
 
+    /// Generates 250 puzzles per difficulty (1,000 total) and checks every one is valid,
+    /// has exactly one solution, and none repeat.
+    func testManyDistinctUniquePuzzles() {
+        var rng = SplitMix64(state: 2026)
+        var seen = Set<[Int]>()
+        for difficulty in Difficulty.allCases {
+            for _ in 0..<250 {
+                let p = PuzzleGenerator.generate(difficulty: difficulty, using: &rng)
+                XCTAssertEqual(SudokuSolver.countSolutions(of: p.givens), 1)
+                XCTAssertTrue(seen.insert(p.givens).inserted, "duplicate puzzle")
+            }
+        }
+        XCTAssertEqual(seen.count, 1000)
+    }
+
     func testGenerationIsFast() {
         measure { _ = PuzzleGenerator.generate(difficulty: .expert) }
     }

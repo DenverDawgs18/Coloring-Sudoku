@@ -11,18 +11,35 @@ struct GameView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let game = vm.game {
-                VStack(spacing: 14) {
-                    header(game)
-                    BoardView(game: game)
-                    ControlsBar(game: game)
-                    PaletteView(game: game)
+                GeometryReader { geo in
+                    if geo.size.width > geo.size.height * 1.15 {
+                        // Landscape (iPad): board on the left, controls on the right.
+                        HStack(spacing: 24) {
+                            BoardView(game: game)
+                            VStack(spacing: 20) {
+                                header(game)
+                                ControlsBar(game: game)
+                                PaletteView(game: game)
+                            }
+                            .frame(maxWidth: 420)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        VStack(spacing: 14) {
+                            header(game)
+                            BoardView(game: game)
+                            ControlsBar(game: game)
+                            PaletteView(game: game)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                        .frame(maxWidth: 600)
+                        .frame(maxWidth: .infinity)
+                    }
                 }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .frame(maxWidth: 600)
-                .frame(maxWidth: .infinity)
             }
-            Spacer(minLength: 0)
             BannerAdView()
         }
         .navigationTitle(vm.game?.difficulty.displayName ?? "")
