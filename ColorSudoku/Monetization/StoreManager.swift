@@ -22,7 +22,7 @@ final class StoreManager: ObservableObject {
         adsRemoved = UserDefaults.standard.bool(forKey: Self.cacheKey)
         // Purchases can complete outside the app (Ask to Buy, other devices, refunds): listen for them.
         updatesTask = Task { [weak self] in
-            for await result in Transaction.updates {
+            for await result in StoreKit.Transaction.updates {
                 await self?.handle(result)
             }
         }
@@ -80,7 +80,7 @@ final class StoreManager: ObservableObject {
 
     func refreshEntitlements() async {
         var owned = false
-        for await result in Transaction.currentEntitlements {
+        for await result in StoreKit.Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
                transaction.productID == Self.removeAdsProductID,
                transaction.revocationDate == nil {
@@ -90,7 +90,7 @@ final class StoreManager: ObservableObject {
         adsRemoved = owned
     }
 
-    private func handle(_ result: VerificationResult<Transaction>) async {
+    private func handle(_ result: VerificationResult<StoreKit.Transaction>) async {
         guard case .verified(let transaction) = result else { return } // ignore unverified (tampered) transactions
         if transaction.productID == Self.removeAdsProductID {
             adsRemoved = transaction.revocationDate == nil
