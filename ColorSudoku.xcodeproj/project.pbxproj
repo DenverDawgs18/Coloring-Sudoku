@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C5D0A1000000000000000101 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = C5D0A1000000000000000201 /* GoogleMobileAds */; };
-		C5D0A1000000000000000102 /* UserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = C5D0A1000000000000000202 /* UserMessagingPlatform */; };
+		C5D0A1000000000000000102 /* GoogleUserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = C5D0A1000000000000000202 /* GoogleUserMessagingPlatform */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,7 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C5D0A1000000000000000101 /* GoogleMobileAds in Frameworks */,
-				C5D0A1000000000000000102 /* UserMessagingPlatform in Frameworks */,
+				C5D0A1000000000000000102 /* GoogleUserMessagingPlatform in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,7 +86,7 @@
 			name = ColorSudoku;
 			packageProductDependencies = (
 				C5D0A1000000000000000201 /* GoogleMobileAds */,
-				C5D0A1000000000000000202 /* UserMessagingPlatform */,
+				C5D0A1000000000000000202 /* GoogleUserMessagingPlatform */,
 			);
 			productName = ColorSudoku;
 			productReference = C5D0A1000000000000000001 /* ColorSudoku.app */;
@@ -328,10 +328,10 @@
 			package = C5D0A1000000000000000211 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
 		};
-		C5D0A1000000000000000202 /* UserMessagingPlatform */ = {
+		C5D0A1000000000000000202 /* GoogleUserMessagingPlatform */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C5D0A1000000000000000212 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */;
-			productName = UserMessagingPlatform;
+			productName = GoogleUserMessagingPlatform;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
