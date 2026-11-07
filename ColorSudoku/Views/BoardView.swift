@@ -32,6 +32,7 @@ struct BoardView: View {
                                     symbolStyle: style,
                                     size: cell
                                 )
+                                .equatable() // only cells whose inputs changed redraw on a tap
                                 .frame(width: cell, height: cell)
                                 .contentShape(Rectangle())
                                 .onTapGesture { vm.select(i) }
@@ -85,7 +86,8 @@ private struct GridLines: Shape {
     }
 }
 
-struct CellView: View {
+/// Equatable so SwiftUI can skip redrawing cells whose inputs didn't change.
+struct CellView: View, Equatable {
     let value: Int
     let notes: UInt16
     let isGiven: Bool
@@ -166,7 +168,7 @@ struct CellSymbol: View {
     let onColor: Bool
 
     var body: some View {
-        let tint: Color = onColor ? .white : Palette.color(value)
+        let tint: Color = onColor ? Palette.symbolColor(value) : Palette.color(value)
         switch style {
         case .none:
             EmptyView()
@@ -175,13 +177,11 @@ struct CellSymbol: View {
                 .resizable()
                 .scaledToFit()
                 .foregroundStyle(tint)
-                .shadow(color: .black.opacity(onColor ? 0.35 : 0), radius: 1)
         case .numbers:
             Text("\(value)")
                 .font(.system(size: 100, weight: .heavy, design: .rounded))
                 .minimumScaleFactor(0.05)
                 .foregroundStyle(tint)
-                .shadow(color: .black.opacity(onColor ? 0.35 : 0), radius: 1)
         }
     }
 }

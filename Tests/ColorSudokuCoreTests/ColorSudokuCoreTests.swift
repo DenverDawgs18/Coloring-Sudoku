@@ -156,6 +156,15 @@ final class GameTests: XCTestCase {
         XCTAssertEqual(game.place(game.puzzle.solution[last], at: last), .solved)
     }
 
+    func testUndoHistoryIsCapped() {
+        var game = makeGame()
+        let cell = (0..<81).first { !game.isGiven($0) }!
+        for k in 0..<(Game.maxUndoSteps + 50) { game.toggleNote(k % 9 + 1, at: cell) }
+        var undos = 0
+        while game.undo() { undos += 1 }
+        XCTAssertEqual(undos, Game.maxUndoSteps)
+    }
+
     func testCodableRoundTrip() throws {
         var game = makeGame()
         let empty = (0..<81).first { !game.isGiven($0) }!

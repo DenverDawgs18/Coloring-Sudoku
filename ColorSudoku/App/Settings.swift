@@ -41,20 +41,31 @@ enum Palette {
     ]
 
     static func color(_ value: Int) -> Color { colors[value - 1] }
+
+    /// Symbol color drawn on top of a color tile: dark on the light yellow, white elsewhere.
+    /// Gives good contrast without a per-cell drop shadow.
+    static func symbolColor(_ value: Int) -> Color { value == 3 ? Color.black.opacity(0.6) : .white }
     static func name(_ value: Int) -> String { names[value - 1] }
     static func shape(_ value: Int) -> String { shapes[value - 1] }
 }
 
+@MainActor
 enum Haptics {
+    // Reused and kept "prepared" so feedback fires with no delay; creating a generator per tap adds latency.
+    private static let impact = UIImpactFeedbackGenerator(style: .light)
+    private static let notification = UINotificationFeedbackGenerator()
+
     static var enabled: Bool { UserDefaults.standard.object(forKey: SettingsKey.haptics) as? Bool ?? true }
 
     static func tap() {
         guard enabled else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        impact.impactOccurred()
+        impact.prepare()
     }
 
     static func notify(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         guard enabled else { return }
-        UINotificationFeedbackGenerator().notificationOccurred(type)
+        notification.notificationOccurred(type)
+        notification.prepare()
     }
 }

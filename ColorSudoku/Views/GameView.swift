@@ -74,10 +74,7 @@ struct GameView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("\(game.hintsUsed) hints used")
             Spacer()
-            Label(TimeFormat.clock(game.elapsed), systemImage: "clock")
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-                .accessibilityLabel("Time \(TimeFormat.clock(game.elapsed))")
+            GameClock()
         }
         .font(.subheadline.weight(.medium))
         .padding(.horizontal, 4)
@@ -215,6 +212,21 @@ private struct WinView: View {
         VStack(spacing: 2) {
             Text(value).font(.title3.weight(.bold)).monospacedDigit()
             Text(title).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The only view that redraws every second while a game runs.
+private struct GameClock: View {
+    @EnvironmentObject private var vm: GameViewModel
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { _ in
+            let text = TimeFormat.clock(vm.elapsed)
+            Label(text, systemImage: "clock")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Time \(text)")
         }
     }
 }
