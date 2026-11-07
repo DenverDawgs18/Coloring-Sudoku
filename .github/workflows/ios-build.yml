@@ -1,0 +1,94 @@
+name: iOS build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  xcode:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      PROJECT: ColorSudoku.xcodeproj
+      SCHEME: ColorSudoku
+      BUNDLE_ID: com.example.colorsudoku
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Xcode version
+        run: xcodebuild -version && xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project "$PROJECT" -scheme "$SCHEME"
+
+      - name: Build for simulator (Debug)
+        run: |
+          xcodebuild build -project "$PROJECT" -scheme "$SCHEME" -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee sim-build.log | grep -E "error:|warning:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" sim-build.log
+
+      - name: Build for device (Release, unsigned — same as an App Store archive minus signing)
+        run: |
+          xcodebuild build -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee device-build.log | grep -E "error:|warning:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" device-build.log
+
+      - name: Warnings in app code
+        run: |
+          grep -hE "ColorSudoku/.*warning:" sim-build.log device-build.log | sort -u | tee warnings.txt || true
+          echo "### App-code warnings: $(wc -l < warnings.txt)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the built app bundle against App Store requirements
+        run: |
+          APP=build/Build/Products/Release-iphoneos/ColorSudoku.app
+          plutil -p "$APP/Info.plist"
+          fail() { echo "::error::$1"; exit 1; }
+          key() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Info.plist" >/dev/null 2>&1; }
+          for k in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion CFBundleDisplayName \
+                   CFBundleIcons UILaunchScreen GADApplicationIdentifier NSUserTrackingUsageDescription \
+                   SKAdNetworkItems ITSAppUsesNonExemptEncryption; do
+            key "$k" || fail "Info.plist is missing $k"
+          done
+          [ -f "$APP/PrivacyInfo.xcprivacy" ] || fail "PrivacyInfo.xcprivacy not in bundle"
+          [ -f "$APP/Assets.car" ] || fail "Asset catalog not compiled"
+          ls "$APP"/AppIcon* >/dev/null 2>&1 || fail "App icon images missing"
+          # App Store rejects icons with an alpha channel.
+          sips -g hasAlpha ColorSudoku/Assets.xcassets/AppIcon.appiconset/AppIcon.png | grep -q "hasAlpha: no" \
+            || fail "App icon has an alpha channel"
+          echo "Bundle checks passed" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Launch in simulator (smoke test)
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)["devices"]
+          ios=[(k,v) for k,v in d.items() if "iOS" in k]
+          ios.sort(key=lambda kv: [int(x) for x in kv[0].split("iOS-")[1].split("-")])
+          print(next(x["udid"] for x in ios[-1][1] if x["name"].startswith("iPhone")))')
+          echo "Simulator: $UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/ColorSudoku.app
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 25
+          xcrun simctl io "$UDID" screenshot launch.png
+          xcrun simctl spawn "$UDID" launchctl list | grep -i "$BUNDLE_ID" || { echo "::error::App is not running after launch (crashed?)"; exit 1; }
+          echo "App launched and is still running after 25s" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload logs and screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            *.log
+            warnings.txt
+            launch.png

@@ -1,0 +1,45 @@
+# Optional: regenerate ColorSudoku.xcodeproj with XcodeGen (`brew install xcodegen && xcodegen`).
+# The committed .xcodeproj already matches this spec; use this only if the project file ever gets out of shape.
+name: ColorSudoku
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    majorVersion: 12.0.0
+  UserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git
+    majorVersion: 3.0.0
+targets:
+  ColorSudoku:
+    type: application
+    platform: iOS
+    sources:
+      - path: ColorSudoku
+        excludes: [Info.plist]
+    dependencies:
+      - package: GoogleMobileAds
+      - package: UserMessagingPlatform
+        product: GoogleUserMessagingPlatform
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.colorsudoku
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: 1
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: ColorSudoku/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Color Sudoku
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.puzzle-games
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        OTHER_LDFLAGS: -ObjC
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+    scheme:
+      storeKitConfiguration: ColorSudoku.storekit
