@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 @MainActor
 final class GameViewModel: ObservableObject {
@@ -12,7 +11,11 @@ final class GameViewModel: ObservableObject {
     /// Bumped on every puzzle completion; observed by the ads layer.
     @Published private(set) var completedCount = 0
 
-    private var timer: AnyCancellable?
+    /// When the clock last started running. The running time is derived from this instead of being
+    /// published every second, so only the small clock view redraws while you play.
+    private var clockStartedAt: Date?
+    private var pendingSave: Task<Void, Never>?
+    private var isStartingGame = false
     private let defaults: UserDefaults
     private static let gameKey = "currentGame.v1"
     private static let statsKey = "stats.v1"
@@ -31,10 +34,20 @@ final class GameViewModel: ObservableObject {
         if let old = game, !old.isSolved, old.filledCount > old.puzzle.clueCount {
             stats.recordAbandon(old.difficulty)
         }
-        isGenerating = true
+        guard !isStartingGame else { return }
+        isStartingGame = true
+        defer { isStartingGame = false }
+        // Generating takes a few milliseconds, so only show the spinner if it is unusually slow;
+        // flashing it for every new game makes the app feel slower than it is.
+        let spinner = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if !Task.isCancelled { self?.isGenerating = true }
+        }
         let puzzle = await Task.detached(priority: .userInitiated) {
             PuzzleGenerator.generate(difficulty: difficulty)
         }.value
+        spinner.cancel()
+        clockStartedAt = nil
         game = Game(puzzle: puzzle)
         selected = nil
         notesMode = false
@@ -44,16 +57,23 @@ final class GameViewModel: ObservableObject {
         save()
     }
 
+    /// Total play time including the currently running stretch.
+    var elapsed: TimeInterval {
+        (game?.elapsed ?? 0) + (clockStartedAt.map { Date().timeIntervalSince($0) } ?? 0)
+    }
+
+    var isClockRunning: Bool { clockStartedAt != nil }
+
     func resumeTimer() {
-        guard timer == nil, let game, !game.isSolved else { return }
-        timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect().sink { [weak self] _ in
-            self?.game?.elapsed += 1
-        }
+        guard clockStartedAt == nil, let game, !game.isSolved else { return }
+        clockStartedAt = Date()
     }
 
     func pauseTimer() {
-        timer?.cancel()
-        timer = nil
+        if clockStartedAt != nil {
+            game?.elapsed = elapsed
+            clockStartedAt = nil
+        }
         save()
     }
 
@@ -100,11 +120,12 @@ final class GameViewModel: ObservableObject {
 
     private func commit(_ updated: Game) {
         game = updated
-        if updated.isSolved { finish(updated) } else { save() }
+        if updated.isSolved { finish() } else { scheduleSave() }
     }
 
-    private func finish(_ finished: Game) {
-        pauseTimer()
+    private func finish() {
+        pauseTimer() // folds the running time into game.elapsed
+        guard let finished = game else { return }
         stats.recordWin(finished)
         completedCount += 1
         selected = nil
@@ -116,8 +137,22 @@ final class GameViewModel: ObservableObject {
 
     // MARK: Persistence
 
+    /// Coalesces the saves from a quick run of taps into one write.
+    private func scheduleSave() {
+        pendingSave?.cancel()
+        pendingSave = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
+            self?.save()
+        }
+    }
+
     func save() {
-        Self.store(game, key: Self.gameKey, in: defaults)
+        pendingSave?.cancel()
+        pendingSave = nil
+        var snapshot = game
+        snapshot?.elapsed = elapsed // include the running stretch without stopping the clock
+        Self.store(snapshot, key: Self.gameKey, in: defaults)
         Self.store(stats, key: Self.statsKey, in: defaults)
     }
 

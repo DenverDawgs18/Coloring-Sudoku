@@ -77,7 +77,7 @@ struct Game: Codable, Equatable {
             changes.append(snapshot(p))
             notes[p] &= ~bit
         }
-        history.append(Move(changes: changes))
+        record(Move(changes: changes))
 
         if value != puzzle.solution[i] {
             mistakes += 1
@@ -89,7 +89,7 @@ struct Game: Codable, Equatable {
     @discardableResult
     mutating func toggleNote(_ value: Int, at i: Int) -> Bool {
         guard Sudoku.values.contains(value), !isGiven(i), values[i] == 0, !isSolved else { return false }
-        history.append(Move(changes: [snapshot(i)]))
+        record(Move(changes: [snapshot(i)]))
         notes[i] ^= UInt16(1) << value
         return true
     }
@@ -97,7 +97,7 @@ struct Game: Codable, Equatable {
     @discardableResult
     mutating func erase(at i: Int) -> Bool {
         guard !isGiven(i), !isSolved, values[i] != 0 || notes[i] != 0 else { return false }
-        history.append(Move(changes: [snapshot(i)]))
+        record(Move(changes: [snapshot(i)]))
         values[i] = 0
         notes[i] = 0
         return true
@@ -137,9 +137,19 @@ struct Game: Codable, Equatable {
             changes.append(snapshot(p))
             notes[p] &= ~bit
         }
-        history.append(Move(changes: changes))
+        record(Move(changes: changes))
         hintsUsed += 1
         return target
+    }
+
+    /// Undo depth. Keeps the saved game (encoded after every move) small during very long sessions.
+    static let maxUndoSteps = 300
+
+    private mutating func record(_ move: Move) {
+        history.append(move)
+        if history.count > Self.maxUndoSteps {
+            history.removeFirst(history.count - Self.maxUndoSteps)
+        }
     }
 
     private func snapshot(_ i: Int) -> CellState {
